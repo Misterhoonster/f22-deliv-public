@@ -127,14 +127,11 @@ export default function App() {
 
   // Toggle color mode functionality
   const [mode, setMode] = useState('light');
-  const colorMode = useMemo(
-    () => ({
+  const colorMode = {
       toggleColorMode: () => {
         setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
       },
-    }),
-    [],
-  );
+    };
 
   const theme = useMemo(
     () =>
