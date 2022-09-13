@@ -10,10 +10,9 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
-import * as React from 'react';
 import { useState } from 'react';
 import { categories } from '../utils/categories';
-import { addEntry } from '../utils/mutations';
+import { addEntry, updateEntry, deleteEntry } from '../utils/mutations';
 
 // Modal component for individual entries.
 
@@ -34,7 +33,8 @@ export default function EntryModal({ entry, type, user }) {
    const [name, setName] = useState(entry.name);
    const [link, setLink] = useState(entry.link);
    const [description, setDescription] = useState(entry.description);
-   const [category, setCategory] = React.useState(entry.category);
+   const [category, setCategory] = useState(entry.category);
+   const [location, setLocation] = useState(entry.location);
 
    // Modal visibility handlers
 
@@ -44,6 +44,7 @@ export default function EntryModal({ entry, type, user }) {
       setLink(entry.link);
       setDescription(entry.description);
       setCategory(entry.category);
+      setLocation(entry.location);
    };
 
    const handleClose = () => {
@@ -59,6 +60,7 @@ export default function EntryModal({ entry, type, user }) {
          description: description,
          user: user?.displayName,
          category: category,
+         location: location,
          userid: user?.uid,
       };
 
@@ -66,9 +68,24 @@ export default function EntryModal({ entry, type, user }) {
       handleClose();
    };
 
-   // TODO: Add Edit Mutation Handler
+   const handleUpdate = () => {
+      const updatedEntry = {
+         id: entry.id,
+         name: name,
+         link: link,
+         description: description,
+         category: category,
+         location: location
+      };
 
-   // TODO: Add Delete Mutation Handler
+      updateEntry(updatedEntry).catch(console.error);
+      handleClose();
+   } 
+
+   const handleDelete = () => {
+      deleteEntry(entry).catch(console.error);
+      handleClose();
+   }
 
    // Button handlers for modal opening and inside-modal actions.
    // These buttons are displayed conditionally based on if adding or editing/opening.
@@ -87,6 +104,8 @@ export default function EntryModal({ entry, type, user }) {
       type === "edit" ?
          <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
+            <Button color="error" onClick={handleDelete}>Delete</Button>
+            <Button variant="contained" onClick={handleUpdate}>Update</Button>
          </DialogActions>
          : type === "add" ?
             <DialogActions>
@@ -132,7 +151,17 @@ export default function EntryModal({ entry, type, user }) {
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                />
-
+               <TextField
+                  margin="normal"
+                  id="location"
+                  label="Location"
+                  fullWidth
+                  variant="standard"
+                  multiline
+                  maxRows={8}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+               />
                <FormControl fullWidth sx={{ "margin-top": 20 }}>
                   <InputLabel id="demo-simple-select-label">Category</InputLabel>
                   <Select

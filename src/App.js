@@ -11,18 +11,23 @@ import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import Stack from "@mui/material/Stack";
+import ToggleColorMode from './components/ToggleColorMode';
 import { createTheme, styled, ThemeProvider } from '@mui/material/styles';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import firebase from 'firebase/compat/app';
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, createContext } from "react";
+import * as React from 'react';
 import './App.css';
 import EntryTable from './components/EntryTable';
 import EntryModal from './components/EntryModal';
 import { mainListItems } from './components/listItems';
 import { db, SignInScreen } from './utils/firebase';
 import { emptyEntry } from './utils/mutations';
+
+// Create color mode context
+export const ColorModeContext = createContext({ toggleColorMode: () => {} });
 
 // MUI styling constants
 
@@ -72,8 +77,6 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
   }),
 );
 
-const mdTheme = createTheme();
-
 // App.js is the homepage and handles top-level functions like user auth.
 
 export default function App() {
@@ -122,6 +125,27 @@ export default function App() {
     })
   }, [currentUser]);
 
+  // Toggle color mode functionality
+  const [mode, setMode] = useState('light');
+  const colorMode = useMemo(
+    () => ({
+      toggleColorMode: () => {
+        setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+      },
+    }),
+    [],
+  );
+
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+        },
+      }),
+    [mode],
+  );
+
   // Main content of homescreen. This is displayed conditionally from user auth status
 
   function mainContent() {
@@ -131,6 +155,7 @@ export default function App() {
           <Grid item xs={12}>
             <Stack direction="row" spacing={3}>
               <EntryModal entry={emptyEntry} type="add" user={currentUser} />
+              <ToggleColorMode />
             </Stack>
           </Grid>
           <Grid item xs={12}>
@@ -144,96 +169,98 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider theme={mdTheme}>
-      <Box sx={{ display: 'flex' }}>
-        <CssBaseline />
-        <AppBar position="absolute" open={open}>
-          <Toolbar
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <Box sx={{ display: 'flex' }}>
+          <CssBaseline />
+          <AppBar position="absolute" open={open}>
+            <Toolbar
+              sx={{
+                pr: '24px', // keep right padding when drawer closed
+              }}
+            >
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="open drawer"
+                onClick={toggleDrawer}
+                sx={{
+                  marginRight: '36px',
+                  ...(open && { display: 'none' }),
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography
+                component="h1"
+                variant="h6"
+                color="inherit"
+                noWrap
+                sx={{ flexGrow: 1 }}
+              >
+                Links for Climate Good
+              </Typography>
+              <Typography
+                component="h1"
+                variant="body1"
+                color="inherit"
+                noWrap
+                sx={{
+                  marginRight: '20px',
+                  display: isSignedIn ? 'inline' : 'none'
+                }}
+              >
+                Signed in as {firebase.auth().currentUser?.displayName}
+              </Typography>
+              <Button variant="contained" size="small"
+                sx={{
+                  marginTop: '5px',
+                  marginBottom: '5px',
+                  display: isSignedIn ? 'inline' : 'none'
+                }}
+                onClick={() => firebase.auth().signOut()}
+              >
+                Log out
+              </Button>
+            </Toolbar>
+          </AppBar>
+          <Drawer variant="permanent" open={open}>
+            <Toolbar
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                px: [1],
+              }}
+            >
+              <IconButton onClick={toggleDrawer}>
+                <ChevronLeftIcon />
+              </IconButton>
+            </Toolbar>
+            <Divider />
+            <List component="nav">
+              {mainListItems}
+            </List>
+          </Drawer>
+          <Box
+            component="main"
             sx={{
-              pr: '24px', // keep right padding when drawer closed
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'light'
+                  ? theme.palette.grey[100]
+                  : theme.palette.grey[900],
+              flexGrow: 1,
+              height: '100vh',
+              overflow: 'auto',
             }}
           >
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="open drawer"
-              onClick={toggleDrawer}
-              sx={{
-                marginRight: '36px',
-                ...(open && { display: 'none' }),
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography
-              component="h1"
-              variant="h6"
-              color="inherit"
-              noWrap
-              sx={{ flexGrow: 1 }}
-            >
-              Links for Climate Good
-            </Typography>
-            <Typography
-              component="h1"
-              variant="body1"
-              color="inherit"
-              noWrap
-              sx={{
-                marginRight: '20px',
-                display: isSignedIn ? 'inline' : 'none'
-              }}
-            >
-              Signed in as {firebase.auth().currentUser?.displayName}
-            </Typography>
-            <Button variant="contained" size="small"
-              sx={{
-                marginTop: '5px',
-                marginBottom: '5px',
-                display: isSignedIn ? 'inline' : 'none'
-              }}
-              onClick={() => firebase.auth().signOut()}
-            >
-              Log out
-            </Button>
-          </Toolbar>
-        </AppBar>
-        <Drawer variant="permanent" open={open}>
-          <Toolbar
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              px: [1],
-            }}
-          >
-            <IconButton onClick={toggleDrawer}>
-              <ChevronLeftIcon />
-            </IconButton>
-          </Toolbar>
-          <Divider />
-          <List component="nav">
-            {mainListItems}
-          </List>
-        </Drawer>
-        <Box
-          component="main"
-          sx={{
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'light'
-                ? theme.palette.grey[100]
-                : theme.palette.grey[900],
-            flexGrow: 1,
-            height: '100vh',
-            overflow: 'auto',
-          }}
-        >
-          <Toolbar />
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            {mainContent()}
-          </Container>
+            <Toolbar />
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+              {mainContent()}
+            </Container>
+          </Box>
         </Box>
-      </Box>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
   );
 }
